@@ -409,7 +409,7 @@ export default function createMainWindow(...flags:MainWindowFlags): BrowserWindo
       const media = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
       navigator.mediaDevices.getUserMedia = Function.prototype.call.apply(Function.prototype.bind, [(constrains) => {
         if(constrains?.audio?.mandatory || constrains?.video?.mandatory)
-          return Promise.rejected(new DOMException("Invalid state.", "NotAllowedError"));
+          return Promise.reject(new DOMException("Invalid state.", "NotAllowedError"));
         return media(constrains);
       }]);
       Object.defineProperty(navigator.mediaDevices.getUserMedia, "name", {value: "getUserMedia"});
@@ -458,7 +458,7 @@ export default function createMainWindow(...flags:MainWindowFlags): BrowserWindo
    * Limitations for APIs to allow running WebCord properly with different
    * Electron releases.
    */
-  const apiSafe = Object.freeze({
+  const apiGuard = Object.freeze({
     capturer: rSatisfies(process.versions.electron,"<22.0.0 || >=26.0.0"),
     unixAudioSharing: Number(process.versions.electron.split(".")[0])>=29
   });
@@ -492,7 +492,7 @@ export default function createMainWindow(...flags:MainWindowFlags): BrowserWindo
       process.env["XDG_SESSION_TYPE"] !== "wayland" ||
       process.platform === "win32";
 
-    const sources = lock || apiSafe.capturer ?
+    const sources = lock || apiGuard.capturer ?
       // Use desktop capturer where it doesn't crash.
       desktopCapturer.getSources({
         types: ["screen", "window"],
@@ -549,7 +549,15 @@ export default function createMainWindow(...flags:MainWindowFlags): BrowserWindo
       });
     } else void sources.then(sources => sources[0] ? callback({
       video: sources[0],
-      ...(apiSafe.unixAudioSharing ? {audio:"loopbackWithMute"} : {})
+      // FIXME: Look if there's audio on Wayland.
+      //        Also test this code:
+      // 
+      //...(apiGuard.unixAudioSharing ? {audio:"loopback"} : {})
+      // 
+      // In general, I know there's bug where Electron seem to
+      // trigger Wayland capture, but somewhat cancels it or
+      // stops taking care of its input (crashes?). Need to check
+      // it out further.
     }) : callback(null as unknown as Electron.Streams));
   },{ useSystemPicker: true });
 
