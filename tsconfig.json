@@ -10,6 +10,8 @@
         "tsBuildInfoFile": "cache/tsc.json",
         /* Whenever sourcemaps should be made for emitted JavaScript files */
         "sourceMap": true,
+        /* Common directory of all source files */
+        "rootDir": "sources",
         /* Directory in which are placed all emitted files */
         "outDir": "app",
         /* Whenever comments are emitted to files */
